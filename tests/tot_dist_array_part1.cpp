@@ -22,6 +22,8 @@ BOOST_AUTO_TEST_CASE_TEMPLATE(typedefs, TestParam, test_params) {
   // The type of the DistArray whose types are being tested
   using tensor_t = tensor_type<TestParam>;
 
+  //------------ Actual type checks start here -------------------------
+
   {
     using corr_impl_type = detail::ArrayImpl<tile_type, policy_type>;
     constexpr bool is_same =

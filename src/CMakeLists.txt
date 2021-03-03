@@ -177,7 +177,6 @@ TiledArray/util/random.h
 TiledArray/util/singleton.h
 TiledArray/util/time.h
 TiledArray/util/vector.h
-
 )
 
 if(CUDA_FOUND)
