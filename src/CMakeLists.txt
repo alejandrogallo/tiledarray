@@ -95,6 +95,7 @@ TiledArray/expressions/blk_tsr_engine.h
 TiledArray/expressions/blk_tsr_expr.h
 TiledArray/expressions/cont_engine.h
 TiledArray/expressions/contraction_helpers.h
+TiledArray/expressions/einsum.h
 TiledArray/expressions/expr.h
 TiledArray/expressions/expr_engine.h
 TiledArray/expressions/expr_trace.h
