@@ -177,6 +177,8 @@ TiledArray/util/random.h
 TiledArray/util/singleton.h
 TiledArray/util/time.h
 TiledArray/util/vector.h
+TiledArray/util/index.h
+TiledArray/util/index.cpp
 )
 
 if(CUDA_FOUND)

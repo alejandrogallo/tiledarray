@@ -25,10 +25,13 @@
 
 #ifndef TILEDARRAY_ANNOTATION_H__INCLUDED
 #define TILEDARRAY_ANNOTATION_H__INCLUDED
+
+#include "TiledArray/error.h"
+
 #include <algorithm>
 #include <cstring>
 #include <string>
-#include "TiledArray/error.h"
+#include <sstream>
 
 namespace TiledArray::detail {
 
