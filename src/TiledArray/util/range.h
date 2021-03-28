@@ -3,12 +3,49 @@ namespace TiledArray::range {
 struct Range {
   using value_type = int64_t;
   using iterator = boost::counting_iterator<value_type>;
-  Range(value_type, value_type);
+  Range(value_type begin, value_type end) :
+    begin_(begin),
+    end_(end)
+  {}
   template <typename T>
-  Range(std::pair<T, T> r) : Range(r.first, r.second) {}
-  iterator begin() const;
-  iterator end() const;
+  Range(std::pair<T, T> r)
+      : Range(r.first, r.second + 1)
+      {}
+  auto begin() const {
+      return iterator(begin_);
+  }
+  auto end() const {
+      return iterator(end_);
+  }
+
+ protected:
+  const value_type begin_, end_;
+
 };
+
+RangeProduct {
+    RangeProduct() = default;
+    RangeProduct(std::initializer_list<Range> rs)
+        : product_(rs.begin(), rs.end()) {}
+
+    RangeProduct& operator *= (Range a) {
+      return *this
+    }
+
+   protected:
+    std::vector<Range> product_;
+
+};
+
+RangeProduct operator * (Range a, Range b){
+    return RangeProduct({a, b});
+};
+
+RangeProduct operator * (const RangeProduct& a, Range b) {
+    return RangeProduct(a) *= b;
+};
+
+}
 
 template<typename R, typename F>
 void cartesian_foreach(const std::vector<R>& rs, F f) {
