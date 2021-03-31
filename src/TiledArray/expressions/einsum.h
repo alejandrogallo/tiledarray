@@ -9,16 +9,6 @@
 
 namespace TiledArray::expressions {
 
-struct Range {
-  using value_type = int64_t;
-  using iterator = boost::counting_iterator<value_type>;
-  Range(value_type, value_type);
-  template <typename T>
-  Range(std::pair<T, T> r) : Range(r.first, r.second) {}
-  iterator begin() const;
-  iterator end() const;
-};
-
 /// einsum function without result indices assumes every index present
 /// in both @p A and @p B is contracted, or, if there are no free indices,
 /// pure Hadamard product is performed.
@@ -61,6 +51,9 @@ auto einsum(TsrExpr<Array> A, TsrExpr<Array> B, const Index &c) {
   // contacted indices
   auto i = (a & b) - h;
 
+  using range::Range;
+  using RangeProduct = range::RangeProduct<Range, index::small_vector<size_t> >;
+
   using RangeMap = IndexMap<std::string,TiledRange1>;
   auto range_map = (
     RangeMap(a, A.array().trange()) |
@@ -70,7 +63,7 @@ auto einsum(TsrExpr<Array> A, TsrExpr<Array> B, const Index &c) {
   struct Term {
     Array array;
     IndexShuffle shuffle;
-    std::vector<Range> rs;
+    RangeProduct rp;
     //DistArray< BatchTile<T> > local;
   };
 
@@ -84,31 +77,33 @@ auto einsum(TsrExpr<Array> A, TsrExpr<Array> B, const Index &c) {
     IndexShuffle(h+e, c)
   };
 
-  std::vector<Range> hr;
+  RangeProduct hp;
   for (size_t i = 0; i < h.size(); ++i) {
     size_t k = C.shuffle[i];
-    auto tr = C.array.trange().at(k);
-    hr.push_back(tr.tiles_range());
+    auto [first,last] = C.array.trange().at(k).tiles_range();
+    hp *= Range(first,last);
   }
 
-  auto h_tile_task = [&terms,&C](auto h) {
+
+  // iterates over tiles of hadamard indices
+  using Index = index::Index<size_t>;
+  for (Index h : hp) {
     for (auto &term : terms) {
-      auto pack = [&](auto ei) {
-        h + ei;
-        // tile::copy(
-        //   term.array.tile(term.shuffle.reverse(h + ei)),
-        //   term.local.tile(ei).data(),
-        //   term.shuffle
-        // );
-      };
-      range::cartesian_foreach(term.rs, pack);
+      for (Index r : term.rp) {
+        auto idx = h + r;
+        tile::copy(
+          std::vector<size_t>{},
+          (double*)(0),
+          (double*)(0),
+          // term.array.tile(term.shuffle.reverse(h + ei)),
+          // term.local.tile(ei).data(),
+          term.shuffle
+        );
+      }
     }
     //C.local("i,j") = terms[0].local("k,i") * terms[1].local("k,j");
     //unpack(C.local, C.array, tr, C.shuffle);
-  };
-
-  // iterates over tiles of hadamard indices
-  range::cartesian_foreach(hr, h_tile_task);
+  }
 
   return C.array;
 

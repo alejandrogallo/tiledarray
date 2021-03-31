@@ -1,51 +1,100 @@
+#include <TiledArray/util/vector.h>
+
+#include <vector>
+#include <boost/iterator/counting_iterator.hpp>
+
 namespace TiledArray::range {
+
+template<typename T>
+using small_vector = container::svector<T>;
 
 struct Range {
   using value_type = int64_t;
   using iterator = boost::counting_iterator<value_type>;
-  Range(value_type begin, value_type end) :
-    begin_(begin),
-    end_(end)
-  {}
-  template <typename T>
-  Range(std::pair<T, T> r)
-      : Range(r.first, r.second + 1)
-      {}
-  auto begin() const {
-      return iterator(begin_);
-  }
-  auto end() const {
-      return iterator(end_);
-  }
-
+  Range(value_type begin, value_type end) : begin_(begin), end_(end) {}
+  auto begin() const { return iterator(begin_); }
+  auto end() const { return iterator(end_); }
  protected:
   const value_type begin_, end_;
 
 };
 
-RangeProduct {
-    RangeProduct() = default;
-    RangeProduct(std::initializer_list<Range> rs)
-        : product_(rs.begin(), rs.end()) {}
+template<typename R, typename T = small_vector<typename R::value_type> >
+struct RangeProduct {
 
-    RangeProduct& operator *= (Range a) {
-      return *this
+  using ranges_type = std::vector<R>;
+  using iterator1 = decltype(std::begin(ranges_type{}[0]));
+  using iterator1s = small_vector<iterator1>;
+
+public:
+
+  RangeProduct() = default;
+  RangeProduct(std::initializer_list<R> ranges) : ranges_(ranges) {}
+
+  RangeProduct& operator *= (R a) {
+    this->ranges_.push_back(a);
+    return *this;
+  }
+
+  const auto& ranges() const { return ranges_; }
+
+  struct iterator {
+    auto operator*() const {
+      T r;
+      for (auto &it : its_) { r.push_back(*it); }
+      return r;
     }
+    bool operator!=(const iterator &other) const {
+      return !(this->p_ == other.p_ && this->its_ == other.its_);
+    }
+    iterator& operator++() {
+      size_t i = its_.size();
+      auto &ranges = p_->ranges();
+      while (i > 0) {
+        --i;
+        ++its_[i];
+        if (i == 0) break;
+        if (its_[i] != std::end(ranges[i])) break;
+        its_[i] = std::begin(ranges[i]);
+      }
+      return *this;
+    }
+    template<class Init>
+    explicit iterator(const RangeProduct *p, Init first, Init rest)
+      : p_(p)
+    {
+      Init init = first;
+      for (const auto& r : p->ranges()) {
+        its_.push_back(init(r));
+        init = rest;
+      }
+    }
+  private:
+    const RangeProduct *p_;
+    iterator1s its_;
+  };
 
-   protected:
-    std::vector<Range> product_;
+  auto begin() const {
+    return iterator(this, std::begin<const R&>, std::begin<const R&>);
+  }
+
+  auto end() const {
+    return iterator(this, std::end<const R&>, std::begin<const R&>);
+  }
+
+protected:
+  ranges_type ranges_;
 
 };
 
-RangeProduct operator * (Range a, Range b){
-    return RangeProduct({a, b});
+RangeProduct<Range> operator*(Range a, Range b){
+  return RangeProduct<Range>({a, b});
 };
 
-RangeProduct operator * (const RangeProduct& a, Range b) {
-    return RangeProduct(a) *= b;
+template<typename R, typename T>
+RangeProduct<R,T> operator*(const RangeProduct<R,T>& a, Range b) {
+  return RangeProduct<R,T>(a) *= b;
 };
-
-}
 
 template<typename R, typename F>
 void cartesian_foreach(const std::vector<R>& rs, F f) {

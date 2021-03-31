@@ -6,7 +6,6 @@
 
 #include <string>
 #include <vector>
-#include <boost/iterator/counting_iterator.hpp>
 
 namespace TiledArray::index {
 
@@ -31,7 +30,9 @@ public:
 
   Index() = default;
   Index(container_type &&s) : data_(std::move(s)) {}
-  Index(const std::vector<T> &s) : data_(s.begin(), s.end()) {}
+
+  template<typename S, typename U = void>
+  Index(const S &s) : data_(s.begin(), s.end()) {}
 
   template<typename U = void>
   Index(const std::string &s) : Index(index::tokenize(s)) {}
