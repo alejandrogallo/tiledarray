@@ -3,6 +3,7 @@
 
 #include <TiledArray/error.h>
 #include <TiledArray/util/vector.h>
+#include <TiledArray/util/annotation.h>
 
 #include <string>
 #include <vector>
@@ -18,7 +19,7 @@ small_vector<std::string> tokenize(const std::string &s) {
   // return r;
   auto r = detail::tokenize_index(s, ',');
   if (r == std::vector<std::string>{""}) return {};
-  return r;
+  return small_vector<std::string> (r.begin(), r.end()); // correct?
 }
 
 small_vector<std::string> validate(const small_vector<std::string> &v) {
@@ -67,7 +68,7 @@ public:
   auto operator[](size_t idx) const { return data_.at(idx); }
 
   /// Returns true if argument exists in the Index object, else returns false
-  bool contains(const std::string& a) {
+  bool contains(const T& a) {
     return data_.find(a) != -1;
   }
 
@@ -81,11 +82,9 @@ public:
 /// @pre a and b do not have duplicates
 template<typename T>
 Index<T> operator&(const Index<T> &a, const Index<T> &b) {
-  typename Index::container_type;
-  Index::container_type r;
-  Index::container_type bset(b.begin(), b.end());
+  typename Index<T>::container_type r;
   for (const auto &s : a) {
-    if (!bset.count(s)) continue;
+    if (!b.contains(s)) continue;
     r.push_back(s);
   }
   return Index(r);
@@ -96,11 +95,10 @@ Index<T> operator&(const Index<T> &a, const Index<T> &b) {
 /// @pre a and b do not have duplicates
 template<typename T>
 Index<T> operator|(const Index<T> &a, const Index<T> &b) {
-  small_vector<T> r;
+  typename Index<T>::container_type r;
   r.assign(a.begin(), a.end());
-  small_vector<T> aset(a.begin(), a.end());
   for (const auto &s : b) {
-    if (aset.count(s)) continue;
+    if (a.contains(s)) continue;
     r.push_back(s);
   }
   return Index(r);
@@ -112,7 +110,7 @@ Index<T> operator|(const Index<T> &a, const Index<T> &b) {
 /// @note unline operator| @p a and @p b can have have duplicates
 template<typename T>
 Index<T> operator+(const Index<T> &a, const Index<T> &b) {
-  small_vector<T> r;
+  typename Index<T>::container_type r;
   r.assign(a.begin(), a.end());
   r.insert(r.end(), b.begin(), b.end());
   return Index(r);
@@ -124,10 +122,9 @@ Index<T> operator+(const Index<T> &a, const Index<T> &b) {
 /// @note unline operator& @p a and @p b can have have duplicates
 template<typename T>
 Index<T> operator-(const Index<T> &a, const Index<T> &b) {
-  small_vector<T> r;
-  small_vector<T> bset(b.begin(), b.end());
+  typename Index<T>::container_type r;
   for (const auto &s : a) {
-    if (bset.count(s)) continue;
+    if (b.contains(s)) continue;
     r.push_back(s);
   }
   return Index(r);
@@ -144,6 +141,24 @@ inline Index<T> operator^(const Index<T> &a, const Index<T> &b) {
 
 template<typename T>
 size_t rank(const Index<T> &idx) { return idx.size(); }
+
+template <typename T>
+Index<T> sorted(const Index<T>& a) {
+  Index<T> sorted(a);
+
+  size_t i = 1;
+  while (i < sorted.size()) {
+    size_t j = i;
+    auto temp = sorted[i];
+    while (j > 0 && sorted[j - 1] > temp) {
+      sorted[j] = sorted[j - 1];
+      --j;
+    }
+    sorted[j] = temp;
+    ++i;
+  }
+  return sorted;
+}
 
 /// permutation taking one Index to another
 /// TODO replace by Permutation
