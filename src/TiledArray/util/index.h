@@ -12,11 +12,22 @@ namespace TiledArray::index {
 template<typename T>
 using small_vector = container::svector<T>;
 
-small_vector<std::string> tokenize(const std::string &s);
+small_vector<std::string> tokenize(const std::string &s) {
+  // std::vector<std::string> r;
+  // boost::split(r, s, boost::is_any_of(", \t"));
+  // return r;
+  auto r = detail::tokenize_index(s, ',');
+  if (r == std::vector<std::string>{""}) return {};
+  return r;
+}
 
-small_vector<std::string> validate(const std::vector<std::string> &v);
+small_vector<std::string> validate(const small_vector<std::string> &v) {
+  return v;
+}
 
-std::string join(const small_vector<std::string> &v);
+std::string join(const small_vector<std::string> &v) {
+  return boost::join(v, ",");
+}
 
 template<typename T, typename U>
 using enable_if_string = std::enable_if_t< std::is_same_v<T,std::string>, U>;
@@ -55,6 +66,11 @@ public:
 
   auto operator[](size_t idx) const { return data_.at(idx); }
 
+  /// Returns true if argument exists in the Index object, else returns false
+  bool contains(const std::string& a) {
+    return data_.find(a) != -1;
+  }
+
  private:
   container_type data_;
 };
@@ -64,28 +80,58 @@ public:
 /// @param[in] b an Index object
 /// @pre a and b do not have duplicates
 template<typename T>
-Index<T> operator&(const Index<T> &a, const Index<T> &b);
-
+Index<T> operator&(const Index<T> &a, const Index<T> &b) {
+  typename Index::container_type;
+  Index::container_type r;
+  Index::container_type bset(b.begin(), b.end());
+  for (const auto &s : a) {
+    if (!bset.count(s)) continue;
+    r.push_back(s);
+  }
+  return Index(r);
+}
 /// union of 2 Index objects
 /// @param[in] a an Index object
 /// @param[in] b an Index object
 /// @pre a and b do not have duplicates
 template<typename T>
-Index<T> operator|(const Index<T> &a, const Index<T> &b);
+Index<T> operator|(const Index<T> &a, const Index<T> &b) {
+  small_vector<T> r;
+  r.assign(a.begin(), a.end());
+  small_vector<T> aset(a.begin(), a.end());
+  for (const auto &s : b) {
+    if (aset.count(s)) continue;
+    r.push_back(s);
+  }
+  return Index(r);
+}
 
 /// concatenation of 2 Index objects
 /// @param[in] a an Index object
 /// @param[in] b an Index object
 /// @note unline operator| @p a and @p b can have have duplicates
 template<typename T>
-Index<T> operator+(const Index<T> &a, const Index<T> &b);
+Index<T> operator+(const Index<T> &a, const Index<T> &b) {
+  small_vector<T> r;
+  r.assign(a.begin(), a.end());
+  r.insert(r.end(), b.begin(), b.end());
+  return Index(r);
+}
 
 /// "difference" of  2 Index objects, i.e. elements of a that are not in b
 /// @param[in] a an Index object
 /// @param[in] b an Index object
 /// @note unline operator& @p a and @p b can have have duplicates
 template<typename T>
-Index<T> operator-(const Index<T> &a, const Index<T> &b);
+Index<T> operator-(const Index<T> &a, const Index<T> &b) {
+  small_vector<T> r;
+  small_vector<T> bset(b.begin(), b.end());
+  for (const auto &s : a) {
+    if (bset.count(s)) continue;
+    r.push_back(s);
+  }
+  return Index(r);
+}
 
 /// elements that are exclusively in @p a or @p b
 /// @param[in] a an Index object
