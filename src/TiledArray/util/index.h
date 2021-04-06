@@ -3,10 +3,8 @@
 
 #include <TiledArray/error.h>
 #include <TiledArray/util/vector.h>
-#include <TiledArray/util/annotation.h>
 
 #include <string>
-#include <vector>
 
 namespace TiledArray::index {
 
@@ -53,12 +51,15 @@ public:
 
   auto begin() const { return data_.begin(); }
   auto end() const { return data_.end(); }
+  auto find(const T& v) const { return data_.find(v); }
 
-  auto operator[](size_t idx) const { return data_.at(idx); }
+  const auto& operator[](size_t idx) const { return data_.at(idx); }
+
+  size_t indexof(const T& v) const;
 
   /// Returns true if argument exists in the Index object, else returns false
-  bool contains(const T& a) {
-    return data_.find(a) != -1;
+  bool contains(const T& a) const {
+    return (this->find(a) != this->end());
   }
 
  private:
