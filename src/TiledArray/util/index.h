@@ -13,22 +13,11 @@ namespace TiledArray::index {
 template<typename T>
 using small_vector = container::svector<T>;
 
-small_vector<std::string> tokenize(const std::string &s) {
-  // std::vector<std::string> r;
-  // boost::split(r, s, boost::is_any_of(", \t"));
-  // return r;
-  auto r = detail::tokenize_index(s, ',');
-  if (r == std::vector<std::string>{""}) return {};
-  return small_vector<std::string> (r.begin(), r.end()); // correct?
-}
+small_vector<std::string> tokenize(const std::string &s);
 
-small_vector<std::string> validate(const small_vector<std::string> &v) {
-  return v;
-}
+small_vector<std::string> validate(const small_vector<std::string> &v);
 
-std::string join(const small_vector<std::string> &v) {
-  return boost::join(v, ",");
-}
+std::string join(const small_vector<std::string> &v);
 
 template<typename T, typename U>
 using enable_if_string = std::enable_if_t< std::is_same_v<T,std::string>, U>;
@@ -145,18 +134,8 @@ size_t rank(const Index<T> &idx) { return idx.size(); }
 template <typename T>
 Index<T> sorted(const Index<T>& a) {
   Index<T> sorted(a);
+  std::sort(sorted.begin(), sorted.end());
 
-  size_t i = 1;
-  while (i < sorted.size()) {
-    size_t j = i;
-    auto temp = sorted[i];
-    while (j > 0 && sorted[j - 1] > temp) {
-      sorted[j] = sorted[j - 1];
-      --j;
-    }
-    sorted[j] = temp;
-    ++i;
-  }
   return sorted;
 }
 
