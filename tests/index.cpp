@@ -82,6 +82,16 @@ BOOST_AUTO_TEST_CASE(index) {
           BOOST_CHECK((lhs ^ rhs) == test.xor_result);
         }
 
+        Index a("i,j,k");
+        std::vector<std::string> s{"eye", "jay", "kay"};
+        IndexMap<std::string, std::string> m(a,s);
+
+        Index b("a,b,c");
+        std::vector<std::string> t{"aye", "bee", "see"};
+        IndexMap<std::string, std::string> p(b,t);
+
+        BOOST_CHECK(IndexMap<std::string, std::string>(Index("i,j,k,a,b,c"), std::vector<std::string>{"eye", "jay", "kay", "aye", "bee", "see"}));
+
         //const auto shuffle1 = IndexShuffle(Index({"i", "j", "k", "l"}), Index({"i", "k", "j", "l"}));
         //auto shuffled = shuffle1()"0,2,1,3";
 

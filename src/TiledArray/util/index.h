@@ -61,7 +61,7 @@ public:
 
   size_t indexof(const T& v) const {
     for (size_t i = 0; i < this->size(); ++i) {
-      return i;
+      if (this[i] == v) return i;
     }
     return -1;
   }
@@ -191,6 +191,9 @@ struct IndexMap {
     }
     assert(it == end);
   }
+  IndexMap(small_vector<std::pair<K, V> > d) {
+    this->data_ = d;
+  }
 
   /// @return const iterator pointing to the element associated with @p key
   auto find(const key_type &key) const {
@@ -220,6 +223,9 @@ struct IndexMap {
     return result;
   }
 
+  auto begin() const { return data_.begin(); }
+  auto end() const { return data_.end(); }
+
  private:
   small_vector< std::pair<key_type, value_type> > data_;
 
@@ -227,8 +233,17 @@ struct IndexMap {
 
 /// TODO to be filled by Sam
 template <typename K, typename T>
-IndexMap<K,T> operator|(const IndexMap<K,T> &a, const IndexMap<K,T> &b);
-
+IndexMap<K,T> operator|(const IndexMap<K,T> &a, const IndexMap<K,T> &b) {
+  small_vector< std::pair<K, T> > d(a.begin(), a.end());
+  for (const auto [k,v] : b) {
+    if (a.find(k)) {
+      TA_ASSERT(a[k] == b[k]);
+    } else {
+      d.push_back(std::pair(k, v));
+    }
+  }
+  return IndexMap(d);
+}
 
 }  // namespace TiledArray::index
 
