@@ -348,7 +348,7 @@ class Tensor {
     return Tensor(this->range(), 1, data);
   }
 
-  auto reshape(const range_type& range, size_t batch_size = 1) {
+  auto reshape(const range_type& range, size_t batch_size = 1) const {
     TA_ASSERT(this->range().volume()*this->batch_size() == range.volume()*batch_size);
     return Tensor(range, batch_size, this->data_);
   }

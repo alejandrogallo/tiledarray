@@ -3,6 +3,7 @@
 
 #include <TiledArray/error.h>
 #include <TiledArray/util/vector.h>
+#include <TiledArray/permutation.h>
 
 #include <string>
 
@@ -51,15 +52,23 @@ public:
 
   auto begin() const { return data_.begin(); }
   auto end() const { return data_.end(); }
-  auto find(const T& v) const { return data_.find(v); }
+
+  auto find(const T& v) const {
+    return std::find(this->begin(), this->end(), v);
+  }
 
   const auto& operator[](size_t idx) const { return data_.at(idx); }
 
-  size_t indexof(const T& v) const;
+  size_t indexof(const T& v) const {
+    for (size_t i = 0; i < this->size(); ++i) {
+      return i;
+    }
+    return -1;
+  }
 
   /// Returns true if argument exists in the Index object, else returns false
-  bool contains(const T& a) const {
-    return (this->find(a) != this->end());
+  bool contains(const T& v) const {
+    return (this->find(v) != this->end());
   }
 
  private:
@@ -77,7 +86,7 @@ Index<T> operator&(const Index<T> &a, const Index<T> &b) {
     if (!b.contains(s)) continue;
     r.push_back(s);
   }
-  return Index(r);
+  return Index<T>(r);
 }
 /// union of 2 Index objects
 /// @param[in] a an Index object
@@ -91,7 +100,7 @@ Index<T> operator|(const Index<T> &a, const Index<T> &b) {
     if (a.contains(s)) continue;
     r.push_back(s);
   }
-  return Index(r);
+  return Index<T>(r);
 }
 
 /// concatenation of 2 Index objects
@@ -103,7 +112,7 @@ Index<T> operator+(const Index<T> &a, const Index<T> &b) {
   typename Index<T>::container_type r;
   r.assign(a.begin(), a.end());
   r.insert(r.end(), b.begin(), b.end());
-  return Index(r);
+  return Index<T>(r);
 }
 
 /// "difference" of  2 Index objects, i.e. elements of a that are not in b
@@ -117,7 +126,7 @@ Index<T> operator-(const Index<T> &a, const Index<T> &b) {
     if (b.contains(s)) continue;
     r.push_back(s);
   }
-  return Index(r);
+  return Index<T>(r);
 }
 
 /// elements that are exclusively in @p a or @p b
@@ -134,46 +143,29 @@ size_t rank(const Index<T> &idx) { return idx.size(); }
 
 template <typename T>
 Index<T> sorted(const Index<T>& a) {
-  Index<T> sorted(a);
-  std::sort(sorted.begin(), sorted.end());
-
-  return sorted;
+  typename Index<T>::container_type r(a.begin(), a.end());
+  std::sort(r.begin(), r.end());
+  return Index<T>(r);
 }
 
-/// permutation taking one Index to another
-/// TODO replace by Permutation
-struct IndexShuffle {
-  IndexShuffle() = default;
-
-  template<typename T>
-  IndexShuffle(const Index<T> &s, const Index<T> &p) {
-    assert(!(s ^ p));
-    for (size_t i = 0; i != p.size(); ++i) {
-      for (size_t j = 0; j != s.size(); ++j) {
-        if (s[j] == p[i]) {
-          mapping_.push_back(j);
-          break;
-        }
-      }
-    }
+template<typename T>
+Permutation permutation(const Index<T> &s, const Index<T> &p) {
+  assert(sorted(s) == sorted(p));
+  small_vector<size_t> m;
+  m.reserve(p.size());
+  for (size_t i = 0; i != p.size(); ++i) {
+    m.push_back(s.indexof(p[i]));
   }
+  return Permutation(m);
+}
 
-  size_t operator[](size_t idx) const { return mapping_[idx]; }
-
-  IndexShuffle operator~() const;
-
-  template <typename S>
-  S operator()(const S &s) const {
-    S t = s;
-    for (size_t i = 0; i < mapping_.size(); ++i) {
-      t[i] = s[mapping_.at(i)];
-    }
-    return t;
-  }
-
- private:
-  small_vector<size_t> mapping_;
-};
+template<typename T, typename ... Args>
+auto permute(const Permutation &p, const Index<T> &s, Args&& ... args) {
+  using R = typename Index<T>::container_type;
+  R r(p.size());
+  detail::permute_n(p.size(), p.begin(), s.begin(), r.begin(), args...);
+  return Index<T>{r};
+}
 
 /// @brief Index-annotated collection of objects
 /// @tparam Value
@@ -244,7 +236,6 @@ namespace TiledArray {
 
 using Index = TiledArray::index::Index<std::string>;
 using TiledArray::index::IndexMap;
-using TiledArray::index::IndexShuffle;
 
 /// converts the annotation of an expression to an Index
 template <typename A, bool Alias>

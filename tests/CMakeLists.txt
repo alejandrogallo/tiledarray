@@ -32,7 +32,9 @@ set(executable ta_test)
 # N.B.: The order of files here represents the order in which the tests are run.
 # N.B. 2: if you want to trim this down you may need to resolve linker errors due to missing fixture deps manually
 set(ta_test_src_files  ta_test.cpp
-	range.cpp
+    einsum.cpp
+    index.cpp
+    range.cpp
     btas.cpp
     meta.cpp
     type_traits.cpp
@@ -98,22 +100,20 @@ set(ta_test_src_files  ta_test.cpp
     initializer_list.cpp
     diagonal_array.cpp
     retile.cpp
-    tot_dist_array_part1.cpp
-    tot_dist_array_part2.cpp
-    random.cpp
-    trace.cpp
-    tot_expressions.cpp
-    annotation.cpp
-    diagonal_array.cpp
-    contraction_helpers.cpp
-    s_t_t_contract_.cpp
-    t_t_t_contract_.cpp
-    t_s_t_contract_.cpp
-    t_tot_tot_contract_.cpp
-    tot_tot_tot_contract_.cpp
-	einsum.cpp
-	linalg.cpp
-	index.cpp
+    # tot_dist_array_part1.cpp
+    # tot_dist_array_part2.cpp
+    # random.cpp
+    # trace.cpp
+    # tot_expressions.cpp
+    # annotation.cpp
+    # diagonal_array.cpp
+    # contraction_helpers.cpp
+    # s_t_t_contract_.cpp
+    # t_t_t_contract_.cpp
+    # t_s_t_contract_.cpp
+    # t_tot_tot_contract_.cpp
+    # tot_tot_tot_contract_.cpp
+    #linalg.cpp
 )
 
 if(CUDA_FOUND)

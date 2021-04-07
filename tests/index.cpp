@@ -82,7 +82,7 @@ BOOST_AUTO_TEST_CASE(index) {
           BOOST_CHECK((lhs ^ rhs) == test.xor_result);
         }
 
-        const auto shuffle1 = IndexShuffle(Index({"i", "j", "k", "l"}), Index({"i", "k", "j", "l"}));
+        //const auto shuffle1 = IndexShuffle(Index({"i", "j", "k", "l"}), Index({"i", "k", "j", "l"}));
         //auto shuffled = shuffle1()"0,2,1,3";
 
 	//BOOST_CHECK(Shuffle(Index({"i", "j", "k", "l"}), Index({"n", "i", "j"})));

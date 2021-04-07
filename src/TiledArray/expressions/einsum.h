@@ -60,26 +60,29 @@ auto einsum(TsrExpr<Array> A, TsrExpr<Array> B, const Index &c) {
     RangeMap(b, B.array().trange())
   );
 
+  using TiledArray::Permutation;
+  using TiledArray::index::permutation;
+
   struct Term {
     Array array;
-    IndexShuffle shuffle;
+    Permutation permutation;
     RangeProduct rp;
-    //DistArray< BatchTile<T> > local;
+    Array local;
   };
 
   Term terms[2] = {
-    { A.array(), IndexShuffle(a, h + (a & e) + i) },
-    { B.array(), IndexShuffle(b, h + (b & e) + i) }
+    { A.array(), permutation(a, h + (a & e) + i) },
+    { B.array(), permutation(b, h + (b & e) + i) }
   };
 
   Term C = {
     Array(),//range_map[c]),
-    IndexShuffle(h+e, c)
+    permutation(h+e, c)
   };
 
   RangeProduct hp;
   for (size_t i = 0; i < h.size(); ++i) {
-    size_t k = C.shuffle[i];
+    size_t k = C.permutation[i];
     auto [first,last] = C.array.trange().at(k).tiles_range();
     hp *= Range(first,last);
   }
@@ -88,21 +91,28 @@ auto einsum(TsrExpr<Array> A, TsrExpr<Array> B, const Index &c) {
   // iterates over tiles of hadamard indices
   using Index = index::Index<size_t>;
   for (Index h : hp) {
+    size_t hb = 1;
     for (auto &term : terms) {
+      Permutation P = term.permutation;
       for (Index r : term.rp) {
         auto idx = h + r;
-        tile::copy(
-          std::vector<size_t>{},
-          (double*)(0),
-          (double*)(0),
-          // term.array.tile(term.shuffle.reverse(h + ei)),
-          // term.local.tile(ei).data(),
-          term.shuffle
-        );
+        auto tile = term.array.find(apply_inverse(P, idx)).get();
+        if (P) tile = tile.permute(P);
+        auto trange = tile.range();
+        tile = tile.reshape(trange, hb);
+        term.local.set(r, tile);
       }
     }
-    //C.local("i,j") = terms[0].local("k,i") * terms[1].local("k,j");
-    //unpack(C.local, C.array, tr, C.shuffle);
+    C.local("i,j") = terms[0].local("k,i") * terms[1].local("k,j");
+    Permutation P;
+    for (Index r : C.rp) {
+      auto c = apply(P, h+r);
+      auto shape = C.array.trange().tile(c);
+      auto tile = C.local.find(r).get();
+      tile = tile.reshape(apply_inverse(P, shape));
+      tile = tile.permute(P);
+      C.array.set(c, tile);
+    }
   }
 
   return C.array;
