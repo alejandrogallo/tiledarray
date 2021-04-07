@@ -90,7 +90,7 @@ BOOST_AUTO_TEST_CASE(index) {
         std::vector<std::string> t{"aye", "bee", "see"};
         IndexMap<std::string, std::string> p(b,t);
 
-        BOOST_CHECK((a | b) == IndexMap<std::string, std::string>(Index("i,j,k,a,b,c"), std::vector<std::string>{"eye", "jay", "kay", "aye", "bee", "see"}));
+        BOOST_CHECK((a | b) == (IndexMap<std::string, std::string>(Index("i,j,k,a,b,c"), std::vector<std::string>{"eye", "jay", "kay", "aye", "bee", "see"})));
 
         //const auto shuffle1 = IndexShuffle(Index({"i", "j", "k", "l"}), Index({"i", "k", "j", "l"}));
         //auto shuffled = shuffle1()"0,2,1,3";
