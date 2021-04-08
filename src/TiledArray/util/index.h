@@ -191,9 +191,7 @@ struct IndexMap {
     }
     assert(it == end);
   }
-  IndexMap(small_vector<std::pair<K, V> > d) {
-    this->data_ = d;
-  }
+  IndexMap(small_vector<std::pair<K, V> > d) : data_(d) { }
 
   /// @return const iterator pointing to the element associated with @p key
   auto find(const key_type &key) const {
@@ -221,6 +219,17 @@ struct IndexMap {
     return result;
   }
 
+
+  bool operator==(const IndexMap<K,V>& other) {
+    for (const auto [k,v] : this->data_) {
+      if (other.find(k) == other.end() || v != other[k]) return false;
+    }
+    for (const auto [k,v] : other) {
+      if (this->find(k) == this->end()) return false;
+    }
+    return true;
+  }
+
   auto begin() const { return data_.begin(); }
   auto end() const { return data_.end(); }
 
@@ -230,9 +239,9 @@ struct IndexMap {
 };
 
 /// TODO to be filled by Sam
-template <typename K, typename T>
-IndexMap<K,T> operator|(const IndexMap<K,T> &a, const IndexMap<K,T> &b) {
-  small_vector< std::pair<K, T> > d(a.begin(), a.end());
+template <typename K, typename V>
+IndexMap<K,V> operator|(const IndexMap<K,V> &a, const IndexMap<K,V> &b) {
+  small_vector< std::pair<K, V> > d(a.begin(), a.end());
   for (const auto [k,v] : b) {
     if (a.find(k) != a.end()) {
       TA_ASSERT(a[k] == b[k]);

@@ -82,15 +82,26 @@ BOOST_AUTO_TEST_CASE(index) {
           BOOST_CHECK((lhs ^ rhs) == test.xor_result);
         }
 
-        Index a("i,j,k");
-        std::vector<std::string> s{"eye", "jay", "kay"};
-        IndexMap<std::string, std::string> m(a,s);
+        struct indexMap_test_tuple {
+          IndexMap<Index, std::vector<std::string>> lhs;
+          IndexMap<Index, std::vector<std::string>> rhs;
+          IndexMap<Index, std::vector<std::string>> or_result;
+        };
+        std::vector<indexMap_test_tuple> indexMap_tests {
+            {IndexMap<Index, std::vector<std::string>>(Index("i,j,k"),std::vector<std::string> {"eye", "jay", "kay"}), IndexMap<Index, std::vector<std::string>>("a,b,c",std::vector<std::string> {"aye", "bee", "see"}),
+                IndexMap<Index, std::vector<std::string>>(Index("i,j,k,a,b,c"), std::vector<std::string>{"eye", "jay", "kay", "aye", "bee", "see"})}
+        };
+        for (const auto test : indexMap_tests) {
+          IndexMap lhs(test.lhs);
+          IndexMap rhs(test.rhs);
+          BOOST_CHECK((lhs | rhs) == test.or_result);
+        }
 
-        Index b("a,b,c");
-        std::vector<std::string> t{"aye", "bee", "see"};
-        IndexMap<std::string, std::string> p(b,t);
+        IndexMap<std::string, std::string> m(Index("i,j,k"),std::vector<std::string> {"eye", "jay", "kay"});
 
-        // BOOST_CHECK((m | p) == (IndexMap<std::string, std::string>(Index("i,j,k,a,b,c"), std::vector<std::string>{"eye", "jay", "kay", "aye", "bee", "see"})));
+        IndexMap<std::string, std::string> p("a,b,c",std::vector<std::string> {"aye", "bee", "see"});
+
+        BOOST_CHECK((m | p) == (IndexMap<std::string, std::string>(Index("i,j,k,a,b,c"), std::vector<std::string>{"eye", "jay", "kay", "aye", "bee", "see"})));
 
         //const auto shuffle1 = IndexShuffle(Index({"i", "j", "k", "l"}), Index({"i", "k", "j", "l"}));
         //auto shuffled = shuffle1()"0,2,1,3";
