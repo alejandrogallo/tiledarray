@@ -203,12 +203,10 @@ struct IndexMap {
 
   /// @return reference to the element associated with @p key
   /// @throw TA::Exception if @p key is not in this map
-  const value_type &at(const key_type &key) const {
+  const auto& at(const key_type &key) const {
     auto it = find(key);
-    if (it != data_.end())
-      return *it;
-    else
-      throw TiledArray::Exception("IndexMap::at(key): key not found");
+    if (it != data_.end()) return it->second;
+    throw TiledArray::Exception("IndexMap::at(key): key not found");
   }
 
   /// @param[in] idx an Index object
@@ -236,11 +234,11 @@ template <typename K, typename T>
 IndexMap<K,T> operator|(const IndexMap<K,T> &a, const IndexMap<K,T> &b) {
   small_vector< std::pair<K, T> > d(a.begin(), a.end());
   for (const auto [k,v] : b) {
-    if (a.find(k)) {
+    if (a.find(k) != a.end()) {
       TA_ASSERT(a[k] == b[k]);
-    } else {
-      d.push_back(std::pair(k, v));
+      continue;
     }
+    d.push_back(std::pair(k, v));
   }
   return IndexMap(d);
 }
