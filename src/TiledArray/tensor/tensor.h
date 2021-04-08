@@ -51,7 +51,7 @@ struct TraceIsDefined<Tensor<T, A>, enable_if_numeric_t<T>> : std::true_type {};
 
 /// \tparam T the value type of this tensor
 /// \tparam A The allocator type for the data
-template <typename T, typename A>
+template <typename T, typename Allocator>
 class Tensor {
   // meaningful error if T& is not assignable, see
   // https://gcc.gnu.org/bugzilla/show_bug.cgi?id=48101
@@ -65,7 +65,7 @@ class Tensor {
   typedef typename range_type::ordinal_type ordinal_type;  ///< Ordinal type
   typedef typename range_type::ordinal_type
       size_type;             ///< Size type (to meet the container concept)
-  typedef A allocator_type;  ///< Allocator type
+  typedef Allocator allocator_type;  ///< Allocator type
   typedef
       typename allocator_type::value_type value_type;  ///< Array element type
   typedef
@@ -1558,26 +1558,29 @@ class Tensor {
 
   // GEMM operations
 
-  template <typename U, typename AU, typename V>
-  Tensor gemm(const Tensor<U, AU>& other, const V factor,
+  template <typename ... As, typename V>
+  Tensor gemm(const Tensor<As...>& A, const V alpha,
               const math::GemmHelper& gemm_helper) const {
     Tensor result;
-    result.gemm(*this, other, factor, gemm_helper);
+    result.gemm(*this, A, alpha, gemm_helper);
     return result;
   }
 
-  template <typename U, typename AU, typename V, typename AV, typename W>
-  Tensor& gemm(const Tensor<U, AU>& left, const Tensor<V, AV>& right,
-               const W alpha, const math::GemmHelper& gemm_helper) {
+  template <typename ... As, typename ... Bs, typename W>
+  Tensor& gemm(const Tensor<As...>& A, const Tensor<Bs...>& B, const W alpha,
+               const math::GemmHelper& gemm_helper)
+  {
     numeric_type beta = 1;
     if (this->empty()) {
-      range_type range = gemm_helper.make_result_range<range_type>(left.range_, right.range());
-      *this = Tensor(range, left.batch_size());
+      range_type range = gemm_helper.make_result_range<range_type>(A.range_, B.range());
+      *this = Tensor(range, A.batch_size(), default_construct{true});
       beta = 0;
     }
+    TA_ASSERT(this->batch_size() == A.batch_size());
+    TA_ASSERT(this->batch_size() == B.batch_size());
     for (size_t i = 0; i < this->batch_size(); ++i) {
       auto Ci = this->batch(i);
-      TiledArray::gemm(alpha, left.batch(i), right.batch(i), beta, Ci, gemm_helper);
+      TiledArray::gemm(alpha, A.batch(i), B.batch(i), beta, Ci, gemm_helper);
     }
     return *this;
   }

@@ -40,6 +40,7 @@ public:
   template<typename U = void>
   Index(const char *s) : Index(std::string(s)) {}
 
+  template<typename U = void>
   operator std::string() const { return index::join(data_); }
 
   operator bool() const { return !data_.empty(); }
@@ -159,11 +160,12 @@ Permutation permutation(const Index<T> &s, const Index<T> &p) {
   return Permutation(m);
 }
 
-template<typename T, typename ... Args>
-auto permute(const Permutation &p, const Index<T> &s, Args&& ... args) {
+template<typename T, bool Inverse>
+auto permute(const Permutation &p, const Index<T> &s, std::bool_constant<Inverse>) {
+  if (!p) return s;
   using R = typename Index<T>::container_type;
   R r(p.size());
-  detail::permute_n(p.size(), p.begin(), s.begin(), r.begin(), args...);
+  detail::permute_n(p.size(), p.begin(), s.begin(), r.begin(), std::bool_constant<Inverse>{});
   return Index<T>{r};
 }
 
@@ -172,36 +174,42 @@ auto permute(const Permutation &p, const Index<T> &s, Args&& ... args) {
 /// This is a map using Index::element_type as key
 template<typename K, typename V>
 struct IndexMap {
+
   using key_type = K;
   using value_type = V;
 
-  template <typename Seq>
-  IndexMap(const Index<K> &keys, Seq &&seq) {
+  IndexMap(const Index<K> &keys, std::initializer_list<V> s)
+    : IndexMap(keys, s.begin(), s.end()) {}
+
+  template <typename S>
+  IndexMap(const Index<K> &keys, S &&s)
+    : IndexMap(keys, s.begin(), s.end()) {}
+
+  template <typename It>
+  IndexMap(const Index<K> &keys, It begin, It end) {
+    auto it = begin;
     data_.reserve(keys.size());
-    constexpr bool seq_is_movable = !std::is_reference_v<Seq>;
-    auto it = std::begin(seq);
-    auto end = std::end(seq);
     for (auto &&key : keys) {
       assert(it != end);
-      if constexpr (seq_is_movable)
-        data_.emplace_back(std::make_pair(key, std::move(*it)));
-      else
-        data_.emplace_back(std::make_pair(key, *it));
+      data_.emplace_back(std::pair<K,V>{key, *it});
       ++it;
     }
     assert(it == end);
   }
-  IndexMap(small_vector<std::pair<K, V> > d) : data_(d) { }
+
+  IndexMap(const small_vector<std::pair<K, V> > &data) : data_(data) { }
 
   /// @return const iterator pointing to the element associated with @p key
   auto find(const key_type &key) const {
-    return std::find_if(data_.begin(), data_.end(),
-                        [&key](const auto &v) { return key == v.first; });
+    return std::find_if(
+      data_.begin(), data_.end(),
+      [&key](const auto &v) { return key == v.first; }
+    );
   }
 
   /// @return reference to the element associated with @p key
   /// @throw TA::Exception if @p key is not in this map
-  const auto& at(const key_type &key) const {
+  const auto& operator[](const key_type &key) const {
     auto it = find(key);
     if (it != data_.end()) return it->second;
     throw TiledArray::Exception("IndexMap::at(key): key not found");
@@ -211,23 +219,12 @@ struct IndexMap {
   /// @return directly-addressable sequence of elements corresponding to the
   /// keys in @p idx
   auto operator[](const Index<K> &idx) const {
-    container::svector<value_type> result;
+    small_vector<value_type> result;
     result.reserve(idx.size());
     for (auto &&key : idx) {
-      result.emplace_back(this->at(key));
+      result.emplace_back(this->operator[](key));
     }
     return result;
-  }
-
-
-  bool operator==(const IndexMap<K,V>& other) {
-    for (const auto [k,v] : this->data_) {
-      if (other.find(k) == other.end() || v != other[k]) return false;
-    }
-    for (const auto [k,v] : other) {
-      if (this->find(k) == this->end()) return false;
-    }
-    return true;
   }
 
   auto begin() const { return data_.begin(); }
@@ -237,6 +234,17 @@ struct IndexMap {
   small_vector< std::pair<key_type, value_type> > data_;
 
 };
+
+template<typename K, typename V>
+bool operator==(const IndexMap<K,V>& lhs, const IndexMap<K,V>& rhs) {
+  for (const auto& [k,v] : lhs) {
+    if (rhs.find(k) == rhs.end() || v != rhs[k]) return false;
+  }
+  for (const auto& [k,v] : rhs) {
+    if (lhs.find(k) == lhs.end()) return false;
+  }
+  return true;
+}
 
 /// TODO to be filled by Sam
 template <typename K, typename V>

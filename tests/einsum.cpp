@@ -27,11 +27,20 @@ using namespace TiledArray;
 using TiledArray::expressions::einsum;
 
 BOOST_AUTO_TEST_CASE(ij_ik_jl) {
-  TArrayD a,b,c;
-  c = einsum(a("i,k"), b("k,j"));
-  c = einsum(a("i,j"), b("i,j"), "i,j");
-  c = einsum(a("i,k"), b("i,k"), "i");
-  c = einsum(a("i,k"), b("j,k"), "i,j,k");
+  auto &world = get_default_world();
+  TiledRange1 tr1{ 0, 3, 8 };
+  TArrayD a(world, TiledRange{ tr1, tr1, tr1 });
+  TArrayD b(world, TiledRange{ tr1, tr1, tr1 });
+  a.fill(1);
+  b.fill(1);
+  TArrayD c;
+  c = einsum(a("h,i,k"), b("h,k,j"));
+  world.gop.fence();
+  c = einsum(a("h,i,k"), b("h,k,j"), "i,j");
+  world.gop.fence();
+  c = einsum(a("i,h,k"), b("k,j,h"), "i,k,j");
+  world.gop.fence();
+  //std::cout << c << std::endl;
 }
 
 

@@ -88,15 +88,17 @@ void permute_n(size_t N, P p, In in, Out out, std::bool_constant<Inverse>) {
   }
 }
 
-template<typename P, typename S, typename ... Args>
-auto permute(const P &p, const S &s, Args&& ... args) {
+template<typename P, typename S, bool Inverse>
+auto permute(const P &p, const S &s, std::bool_constant<Inverse>) {
   // using std::size;
   // using std::begin;
   // size_t K = size(p);
   // S r(K);
   // detail::permute_n(K, begin(p), begin(s), begin(r), args...);
   // return r;
-  return p*s;
+  if (!p) return s;
+  if constexpr (Inverse) return p.inv()*s;
+  else return p*s;
 }
 
 }  // namespace detail

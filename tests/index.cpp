@@ -83,13 +83,16 @@ BOOST_AUTO_TEST_CASE(index) {
         }
 
         struct indexMap_test_tuple {
-          IndexMap<Index, std::vector<std::string>> lhs;
-          IndexMap<Index, std::vector<std::string>> rhs;
-          IndexMap<Index, std::vector<std::string>> or_result;
+          IndexMap<Index, std::string> lhs;
+          IndexMap<Index, std::string> rhs;
+          IndexMap<Index, std::string> or_result;
         };
         std::vector<indexMap_test_tuple> indexMap_tests {
-            {IndexMap<Index, std::vector<std::string>>(Index("i,j,k"),std::vector<std::string> {"eye", "jay", "kay"}), IndexMap<Index, std::vector<std::string>>("a,b,c",std::vector<std::string> {"aye", "bee", "see"}),
-                IndexMap<Index, std::vector<std::string>>(Index("i,j,k,a,b,c"), std::vector<std::string>{"eye", "jay", "kay", "aye", "bee", "see"})}
+          {
+            IndexMap<Index, std::string>("i,j,k", {"eye", "jay", "kay"}),
+            IndexMap<Index, std::string>("i,b,c", {"eye", "bee", "see"}),
+            IndexMap<Index, std::string>("i,b,c,j,k", {"eye", "bee", "see", "jay", "kay" })
+          }
         };
         for (const auto test : indexMap_tests) {
           IndexMap lhs(test.lhs);

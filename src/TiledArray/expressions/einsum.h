@@ -18,6 +18,7 @@ namespace TiledArray::expressions {
 /// case; use Expr::reduce()
 template <typename Array>
 auto einsum(TsrExpr<Array> A, TsrExpr<Array> B) {
+  printf("einsum(A,B)\n");
   auto a = idx(A);
   auto b = idx(B);
   Array R;
@@ -32,7 +33,14 @@ auto einsum(TsrExpr<Array> A, TsrExpr<Array> B) {
 /// @warning just as in the plain expression code, reductions are a special
 /// case; use Expr::reduce()
 template<typename Array>
-auto einsum(TsrExpr<Array> A, TsrExpr<Array> B, const Index &c) {
+auto einsum(
+  TsrExpr<Array> A, TsrExpr<Array> B,
+  const Index &c,
+  World &world = get_default_world())
+{
+
+  printf("einsum(A,B,c)\n");
+
   auto a = idx(A);
   auto b = idx(B);
 
@@ -65,52 +73,76 @@ auto einsum(TsrExpr<Array> A, TsrExpr<Array> B, const Index &c) {
 
   struct Term {
     Array array;
+    Index idx;
     Permutation permutation;
-    RangeProduct rp;
+    RangeProduct tiles;
     Array local;
   };
 
-  Term terms[2] = {
-    { A.array(), permutation(a, h + (a & e) + i) },
-    { B.array(), permutation(b, h + (b & e) + i) }
-  };
+  Term AB[2] = { { A.array(), a }, { B.array(), b } };
 
-  Term C = {
-    Array(),//range_map[c]),
-    permutation(h+e, c)
-  };
-
-  RangeProduct hp;
-  for (size_t i = 0; i < h.size(); ++i) {
-    size_t k = C.permutation[i];
-    auto [first,last] = C.array.trange().at(k).tiles_range();
-    hp *= Range(first,last);
+  for (auto &term : AB) {
+    auto ei = (e+i & term.idx);
+    term.local = Array(world, TiledRange(range_map[ei]));
+    for (auto idx : ei) {
+      term.tiles *= Range(range_map[idx].tiles_range());
+    }
+    if (term.idx != h+ei) {
+      term.permutation = permutation(term.idx, h+ei);
+    }
   }
 
+  Term C = { Array(world, TiledRange(range_map[c])), c };
+  for (auto idx : e) {
+    C.tiles *= Range(range_map[idx].tiles_range());
+  }
+  if (C.idx != h+e) {
+    C.permutation = permutation(h+e, C.idx);
+  }
+
+  struct {
+    RangeProduct tiles;
+    std::vector< std::vector<size_t> > batch;
+  } H;
+
+  for (auto idx : h) {
+    H.tiles *= Range(range_map[idx].tiles_range());
+    H.batch.push_back({});
+    for (auto r : range_map[idx]) {
+      H.batch.back().push_back(Range{r}.size());
+    }
+  }
 
   // iterates over tiles of hadamard indices
   using Index = index::Index<size_t>;
-  for (Index h : hp) {
-    size_t hb = 1;
-    for (auto &term : terms) {
-      Permutation P = term.permutation;
-      for (Index r : term.rp) {
-        auto idx = h + r;
-        auto tile = term.array.find(apply_inverse(P, idx)).get();
+  for (Index h : H.tiles) {
+    size_t batch = 1;
+    for (size_t i = 0; i < h.size(); ++i) {
+      batch *= H.batch[i].at(h[i]);
+    }
+    for (auto &term : AB) {
+      term.local = Array(term.local.world(), term.local.trange());
+      const Permutation &P = term.permutation;
+      for (Index ei : term.tiles) {
+        auto tile = term.array.find(apply_inverse(P, h+ei)).get();
         if (P) tile = tile.permute(P);
-        auto trange = tile.range();
-        tile = tile.reshape(trange, hb);
-        term.local.set(r, tile);
+        auto shape = term.local.trange().tile(ei);
+        tile = tile.reshape(shape, batch);
+        term.local.set(ei, tile);
       }
     }
-    C.local("i,j") = terms[0].local("k,i") * terms[1].local("k,j");
-    Permutation P;
-    for (Index r : C.rp) {
-      auto c = apply(P, h+r);
+    auto& [A,B] = AB;
+    auto ei = e+i;
+    C.local(e) = A.local(ei & A.idx) * B.local(ei & B.idx);
+    const Permutation &P = C.permutation;
+    for (Index e : C.tiles) {
+      auto c = apply(P, h+e);
       auto shape = C.array.trange().tile(c);
-      auto tile = C.local.find(r).get();
-      tile = tile.reshape(apply_inverse(P, shape));
-      tile = tile.permute(P);
+      shape = apply_inverse(P, shape);
+      auto tile = C.local.find(e).get();
+      assert(tile.batch_size() == batch);
+      tile = tile.reshape(shape);
+      if (P) tile = tile.permute(P);
       C.array.set(c, tile);
     }
   }

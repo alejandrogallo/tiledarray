@@ -11,10 +11,13 @@ using small_vector = container::svector<T>;
 struct Range {
   using value_type = int64_t;
   using iterator = boost::counting_iterator<value_type>;
+  template<class Pair>
+  explicit Range(Pair &&pair) : Range(pair.first, pair.second) {}
   Range(value_type begin, value_type end) : begin_(begin), end_(end) {}
   auto begin() const { return iterator(begin_); }
   auto end() const { return iterator(end_); }
- protected:
+  auto size() const { return end_ - begin_; }
+protected:
   const value_type begin_, end_;
 
 };
@@ -23,8 +26,6 @@ template<typename R, typename T = small_vector<typename R::value_type> >
 struct RangeProduct {
 
   using ranges_type = std::vector<R>;
-  using iterator1 = decltype(std::begin(ranges_type{}[0]));
-  using iterator1s = small_vector<iterator1>;
 
 public:
 
@@ -39,6 +40,7 @@ public:
   const auto& ranges() const { return ranges_; }
 
   struct iterator {
+    using iterator1 = decltype(std::begin(ranges_type{}[0]));
     auto operator*() const {
       T r;
       for (auto &it : its_) { r.push_back(*it); }
@@ -59,27 +61,29 @@ public:
       }
       return *this;
     }
-    template<class Init>
-    explicit iterator(const RangeProduct *p, Init first, Init rest)
-      : p_(p)
-    {
-      Init init = first;
+  private:
+    friend class RangeProduct;
+    explicit iterator(const RangeProduct *p, bool End = false) {
+      this->p_ = p;
+      using std::begin;
+      using std::end;
       for (const auto& r : p->ranges()) {
-        its_.push_back(init(r));
-        init = rest;
+        auto it = (End ? end(r) : begin(r));
+        its_.push_back(it);
+        End = false;
       }
     }
   private:
     const RangeProduct *p_;
-    iterator1s its_;
+    small_vector<iterator1> its_;
   };
 
   auto begin() const {
-    return iterator(this, std::begin<const R&>, std::begin<const R&>);
+    return iterator(this);
   }
 
   auto end() const {
-    return iterator(this, std::end<const R&>, std::begin<const R&>);
+    return iterator(this, true);
   }
 
 protected:
